@@ -21,11 +21,11 @@ class ACReflexAgent:
 
 
     def decide(self):
-        # Generate random room temp & humidity
+        # generate random room temp & humidity
         room_temp = round(random.uniform(22, 45), 1)
         humidity = round(random.uniform(30, 70), 1)
 
-        #for json
+        # for json file
         current_input = {
             'room_temp': room_temp,
             'humidity': humidity,
@@ -39,7 +39,7 @@ class ACReflexAgent:
             print("Using past experience")
             return similar['output']
 
-        # Base AC temp decision
+        # AC temp decision
         if room_temp >= 38:
             ac_temp = 18
         elif room_temp >= 32:
@@ -67,7 +67,7 @@ class ACReflexAgent:
                 mode = "Sleep Mode"
                 ac_temp += 2
 
-        # Fan speed logic
+        # Fan speed
         num_people = int(self.data['num_people'])
         if num_people >= 4 or room_temp > 35:
             fan_speed = "High"
@@ -79,7 +79,7 @@ class ACReflexAgent:
         # get positions
         positions = [p.strip() for p in self.data['position'].split(',')]
 
-        # Determine flap direction
+        # flap direction
         if len(positions) > 1:
             flap_direction = "Rotate"
         else:
@@ -93,11 +93,11 @@ class ACReflexAgent:
             elif 1 <= hour <= 2:
                 flap_direction = "Right"
             else:
-                # For other angles
+                # for other angles
                 flap_direction = "Middle"
 
 
-        # --- 1. Combo base values ---
+        # combo(AC type & Compressor type) power consumption
         combo_base_units = {
             ("Split AC", "Inverter Rotary Compressor"): 10,
             ("Cassette AC", "Inverter Rotary Compressor"): 11,
@@ -112,21 +112,21 @@ class ACReflexAgent:
         base_combo_units = combo_base_units.get(combo_key, 12)  # fallback if combo missing, 12kwh as reasonable average
 
 
-        # --- Get inputs ---
+        # inputs
         tonnage = float(self.data['tonnage'])
         iseer = float(self.data['iseer'])
         external_heat = float(self.data['external_heat'])
         room_area = float(self.data['room_size'])
         affordable_units = float(self.data['affordable_units'])
 
-        # --- Calculate cooling load ---
-        area_cooling_kw = room_area * 0.04  # Simple estimate: 0.04 kW per sq ft
+        # calculation of cooling load
+        area_cooling_kw = room_area * 0.04  # simple estimate: 0.04 kW per sq ft
 
         cooling_load_kw = tonnage * 3.5 + external_heat / 1000 + area_cooling_kw
         hourly_consumption = cooling_load_kw / iseer
         estimated_units = hourly_consumption * 8  # assume 8 hr/day
 
-        # --- 3. Add combo base ---
+        # Add combo in cooling load unit
         total_daily_units = estimated_units + base_combo_units
         total_hourly_consumption = total_daily_units / 8
 
@@ -135,7 +135,7 @@ class ACReflexAgent:
         print(f"Final total daily units: {total_daily_units:.2f} kWh")
         print(f"Final hourly consumption: {total_hourly_consumption:.2f} kWh")
 
-        # --- Adjust if over budget ---
+        # adjustment if over budget
         adjustments = 0
         while estimated_units > affordable_units and adjustments < 2:
             ac_temp += 1  # raise temp to reduce load
@@ -152,7 +152,7 @@ class ACReflexAgent:
             mode = "Eco Mode" 
             fan_speed = "Low"
 
-        # Prepare what you want to store
+        # storage in json
         memory = self.load_memory()
         memory.append({
             'input': current_input,
@@ -178,6 +178,7 @@ class ACReflexAgent:
             "Estimated Units/day": round(estimated_units, 2)
         }
     
+    # comparision based on past memory in json file
     def find_similar(self, current_input):
         memory = self.load_memory()
         for entry in memory:
@@ -190,15 +191,16 @@ class ACReflexAgent:
                 return entry
         return None
     
+    # ------------for Goal based---------------
     def plan_to_goal(self, current_input):
         """
-        Simple goal-based plan.
+        Simple Goal-based plan.
         Goal: Keep temp comfy & efficient.
         """
         room_temp = current_input['room_temp']
         humidity = current_input['humidity']
 
-        # Example: Goal to keep AC temp between 24–26
+        # Goal to keep AC temp between 22–26
         if room_temp > 30:
             ac_temp = 22
         else:
@@ -219,6 +221,7 @@ class ACReflexAgent:
 
         return plan
 
+# memeory review for Goal based 
 def find_similar(self, current_input):
         memory = self.load_memory()
         for entry in memory:
@@ -236,14 +239,14 @@ class SmartACInputTab:
         self.master = master
         master.title("Smart AC")
 
-        # --- AC Type Radiobuttons ---
+        # AC type Radiobuttons
         tk.Label(master, text="Type of AC:").grid(row=0, column=0, sticky="w")
         self.ac_type_var = tk.StringVar(value="0")  
         ac_types = ["Window AC", "Split AC", "Cassette AC", "Portable AC"]
         for idx, ac_type in enumerate(ac_types):
             tk.Radiobutton(master, text=ac_type, variable=self.ac_type_var, value=ac_type).grid(row=0, column=idx+1)
 
-        # --- Tonnage Combobox ---
+        # Tonnage Combobox
         tk.Label(master, text="AC Tonnage:").grid(row=1, column=0, sticky="w")
         self.tonnage_var = tk.StringVar()
         tonnage_options = ["0.8", "1.0", "1.4", "1.5", "1.6", "1.7", "1.8",
@@ -251,24 +254,24 @@ class SmartACInputTab:
         self.tonnage_cb = ttk.Combobox(master, textvariable=self.tonnage_var, values=tonnage_options, state="readonly", width=25)
         self.tonnage_cb.grid(row=1, column=1, padx=10)
 
-        # --- ISEER Rating Entry ---
+        # ISEER Rating entry
         tk.Label(master, text="ISEER Rating (e.g., 3.9):").grid(row=2, column=0, sticky="w")
         self.iseer_entry = tk.Entry(master, width=28)
         self.iseer_entry.grid(row=2, column=1)
 
-        # --- Cooling Capacity Entry ---
+        # cooling capacity entry
         tk.Label(master, text="Cooling Capacity (100%):").grid(row=3, column=0, sticky="w")
         self.cooling_entry = tk.Entry(master, width=28)
         self.cooling_entry.grid(row=3, column=1)
 
-        # --- Last Service Radiobuttons ---
+        # last service Radiobuttons
         tk.Label(master, text="Last Service:").grid(row=4, column=0, sticky="w")
         self.service_var = tk.StringVar(value="0") 
         service_options = ["6 months", "12 months", "More"]
         for idx, option in enumerate(service_options):
             tk.Radiobutton(master, text=option, variable=self.service_var, value=option).grid(row=4, column=idx+1)
 
-        # --- Compressor Type Combobox ---
+        # Compressor type Combobox
         tk.Label(master, text="Compressor Type:").grid(row=5, column=0, sticky="w")
         self.compressor_var = tk.StringVar()
         compressor_options = [
@@ -280,9 +283,10 @@ class SmartACInputTab:
         self.compressor_cb = ttk.Combobox(master, textvariable=self.compressor_var, values=compressor_options, state="readonly", width=25)
         self.compressor_cb.grid(row=5, column=1)
 
-        # --- Next Button ---
+        # next button
         tk.Button(master, text="Next", command=self.next).grid(row=6, column=1, pady=10)
 
+    # Error handling 
     def next(self):
         try:
             iseer = float(self.iseer_entry.get())
@@ -297,13 +301,15 @@ class SmartACInputTab:
             if not self.compressor_var.get():
                 raise ValueError("Select compressor type.")
 
-            #Open next page
+            # open next page
             self.open_next_page()
 
         except ValueError as ve:
             messagebox.showerror("Input Error", str(ve))
         except:
             messagebox.showerror("Input Error", "ISEER and Cooling Capacity must be numbers.")
+
+    # ------------Next page inputs---------------
 
     def open_next_page(self):
         next_window = tk.Toplevel(self.master)
@@ -341,6 +347,7 @@ class SmartACInputTab:
 
         tk.Button(next_window, text="Submit", command=self.submit_next_page).grid(row=7, column=1, pady=10)
 
+    # Error handling
     def submit_next_page(self):
         try:
             num_people = int(self.people_entry.get())
@@ -362,7 +369,7 @@ class SmartACInputTab:
             if not position.endswith("o"):
                 raise ValueError("Position should be in clock format like '11o'.")
 
-            #Store for your agent
+            # Store for your agent
             print(f"Number of People: {num_people}")
             print(f"Other Heat Source: {other_heat} W")
             print(f"Total Energy You Can Afford: {total_energy} units")
@@ -371,7 +378,6 @@ class SmartACInputTab:
             print(f"Timing: {timing}")
             print(f"Position: {position}")
 
-            # Example: save to attributes
             self.num_people = num_people
             self.other_heat = other_heat
             self.total_energy = total_energy
@@ -380,15 +386,12 @@ class SmartACInputTab:
             self.timing = timing
             self.position = position
 
-        #No success popup — just store and close if you like
-        # self.master.destroy() or next_window.destroy() if you store it
 
         except ValueError as ve:
             messagebox.showerror("Input Error", str(ve))
         except:
             messagebox.showerror("Input Error", "Please enter valid data in all fields.")
-        
-        # --- AFTER your input validation ---
+       
     # Build user_data dictionary for the agent
         self.user_data = {
             "ac_type": self.ac_type_var.get(),
@@ -412,7 +415,7 @@ class SmartACInputTab:
         result = agent.decide()
         previous_data = agent.load_memory()[:-1]  # Exclude the just-added result if needed
 
-        # Show results in popup or next window
+        # shows results in popup 
         result_text = f"""
         Room Temp: {result['Room Temp']} °C
         Humidity: {result['Humidity']}%
@@ -424,12 +427,12 @@ class SmartACInputTab:
         """
         messagebox.showinfo("AC Reflex Agent Result", result_text)
 
-        # Prepare previous data text
+        # prepare previous data text
         prev_text = ""
         for entry in previous_data:
             prev_text += f"INPUT: {entry['input']}\nOUTPUT: {entry['output']}\n\n"
 
-        # New output
+        # New popup output/result
         new_text = f"""
         Room Temp: {result['Room Temp']} °C
         Humidity: {result['Humidity']}%
@@ -440,7 +443,7 @@ class SmartACInputTab:
         Estimated Units/day: {result['Estimated Units/day']} kWh
         """
 
-        # Create a new window with 2 text areas side by side
+        # Creates a new window with 2 text areas side by side
         split_window = tk.Toplevel(self.master)
         split_window.title("Goal-Based Agent Comparison")
 
@@ -451,7 +454,6 @@ class SmartACInputTab:
         right = tk.Text(split_window, width=60, height=30)
         right.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True)
         right.insert(tk.END, f"--- NEW OUTPUT ---\n\n{new_text}")
-
 
 
 
