@@ -28,7 +28,6 @@ An intelligent **Tkinter GUI** app that works on different **agents** to suggest
    - Compares with past scenarios for reuse.
    - Adjusts if estimated energy exceeds your budget.
 4. **Output:** Displays suggestions & energy use estimate.
-5. **Stores:** Saves input-output to JSON for future reuse.
 
 ---
 
@@ -54,7 +53,5 @@ An intelligent **Tkinter GUI** app that works on different **agents** to suggest
 - Base combo units adjust total energy estimate  
 - If units > budget, adjust AC temp & mode to save energy
 
----
 
-## 🗃️ Project Structure
 
