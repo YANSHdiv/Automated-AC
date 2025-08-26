@@ -6,10 +6,35 @@ import requests
 import os
 from ic.client import Client;
 from ic.identity import Identity;
-from ic.candid import Types, encode, decode;
+from ic.candid import Types, encode, decode
+
+client = Client()
+identity = Identity()
 
 CANISTER_ID = "uxrrr-q7777-77774-qaaaq-cai"   # deployed ID
-IC_GATEWAY = "http://127.0.0.1:4943"     # uses for local dfx
+IC_GATEWAY = "http://127.0.0.1:4943"     # mainnet; uses "http://127.0.0.1:4943" for local dfx
+InputType = Types.Record({
+    "room_temp": Types.Float64,
+    "humidity": Types.Float64,
+    "num_people": Types.Nat,
+    "movement": Types.Text,
+    "timing": Types.Text,
+})
+
+OutputType = Types.Record({
+    "Room_Temp": Types.Float64,
+    "Humidity": Types.Float64,
+    "Suggested_AC_Temp": Types.Float64,
+    "Mode": Types.Text,
+    "Fan_Speed": Types.Text,
+    "Flap_Direction": Types.Text,
+    "Estimated_Units_per_day": Types.Float64,
+})
+
+MemoryEntryType = Types.Record({
+    "input": InputType,
+    "output": OutputType,
+})
 
 
 class ACReflexAgent:
@@ -20,28 +45,18 @@ class ACReflexAgent:
     def save_memory(self, new_entry):
         try:
             print("Saving to canister:", new_entry)
-            resp = requests.post(
-                f"{IC_GATEWAY}/api/v2/canister/{CANISTER_ID}/update/saveMemory",
-                json=new_entry
-            )
-            print("Save response:", resp.text)
+            encoded = encode([MemoryEntryType], [new_entry])
+            client.call(CANISTER_ID, "saveMemory", encoded, identity)
+
         except Exception as e:
             print("Error saving memory to Motoko canister:", e)
 
 
     def load_memory(self):
         try:
-            resp = requests.post(
-                f"{IC_GATEWAY}/api/v2/canister/{CANISTER_ID}/query/loadMemory"
-            )
-            print("Raw canister response:", resp.text)   # 👈 check this
-            text = resp.text.strip()
-            if text == "" or text == "[]":
-                return []
-            try:
-                return json.loads(text)
-            except:
-                return [text]
+            raw = client.query(CANISTER_ID, "loadMemory", [])
+            decoded = decode([Types.Vec(MemoryEntryType)], raw)
+            return decoded[0] if decoded else []
         except Exception as e:
             print("Error loading memory from Motoko canister:", e)
             return []
