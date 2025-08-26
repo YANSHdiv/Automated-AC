@@ -4,8 +4,12 @@ import random
 import json
 import requests
 import os
+from ic.client import Client;
+from ic.identity import Identity;
+from ic.candid import Types, encode, decode;
+
 CANISTER_ID = "uxrrr-q7777-77774-qaaaq-cai"   # deployed ID
-IC_GATEWAY = "http://127.0.0.1:4943"     # mainnet; uses "http://127.0.0.1:4943" for local dfx
+IC_GATEWAY = "http://127.0.0.1:4943"     # uses for local dfx
 
 
 class ACReflexAgent:
