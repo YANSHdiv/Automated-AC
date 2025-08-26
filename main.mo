@@ -53,15 +53,3 @@ actor ACReflexAgent {
     return null;
   };
 };
-
-from ic.client import Client;
-from ic.identity import Identity;
-from ic.candid import Types, encode, decode;
-
-client = Client();
-identity = Identity();
-canister_id = "uxrrr-q7777-77774-qaaaq-cai";
-
-# Example: call loadMemory
-result = client.query(canister_id, "loadMemory", [], identity);
-print(result);
