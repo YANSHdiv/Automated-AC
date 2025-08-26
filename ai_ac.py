@@ -2,22 +2,45 @@ import tkinter as tk
 from tkinter import ttk, messagebox
 import random
 import json
+import requests
 import os
+CANISTER_ID = "uxrrr-q7777-77774-qaaaq-cai"   # deployed ID
+IC_GATEWAY = "http://127.0.0.1:4943"     # mainnet; uses "http://127.0.0.1:4943" for local dfx
+
 
 class ACReflexAgent:
     def __init__(self, user_data):
         self.data = user_data
+        self.memory = []  # to store past experiences
+
+    def save_memory(self, new_entry):
+        try:
+            print("Saving to canister:", new_entry)
+            resp = requests.post(
+                f"{IC_GATEWAY}/api/v2/canister/{CANISTER_ID}/update/saveMemory",
+                json=new_entry
+            )
+            print("Save response:", resp.text)
+        except Exception as e:
+            print("Error saving memory to Motoko canister:", e)
+
 
     def load_memory(self):
-        if os.path.exists('ac_agent_memory.json'):
-            with open('ac_agent_memory.json', 'r') as f:
-                return json.load(f)
-        else:
+        try:
+            resp = requests.post(
+                f"{IC_GATEWAY}/api/v2/canister/{CANISTER_ID}/query/loadMemory"
+            )
+            print("Raw canister response:", resp.text)   # 👈 check this
+            text = resp.text.strip()
+            if text == "" or text == "[]":
+                return []
+            try:
+                return json.loads(text)
+            except:
+                return [text]
+        except Exception as e:
+            print("Error loading memory from Motoko canister:", e)
             return []
-
-    def save_memory(self, memory):
-        with open('ac_agent_memory.json', 'w') as f:
-            json.dump(memory, f, indent=4)
 
 
     def decide(self):
@@ -25,7 +48,8 @@ class ACReflexAgent:
         room_temp = round(random.uniform(22, 45), 1)
         humidity = round(random.uniform(30, 70), 1)
 
-        # for json file
+
+        # for motoko canister
         current_input = {
             'room_temp': room_temp,
             'humidity': humidity,
@@ -152,21 +176,22 @@ class ACReflexAgent:
             mode = "Eco Mode" 
             fan_speed = "Low"
 
-        # storage in json
-        memory = self.load_memory()
-        memory.append({
-            'input': current_input,
-            'output': {
-                "Room Temp": room_temp,
+        # for motoko canister
+        entry = {
+            "input": current_input,
+            "output": {
+                "Room_Temp": room_temp,
                 "Humidity": humidity,
-                "Suggested AC Temp": round(ac_temp, 1),
+                "Suggested_AC_Temp": round(ac_temp, 1),
                 "Mode": mode,
-                "Fan Speed": fan_speed,
-                "Flap Direction": flap_direction,
-                "Estimated Units/day": round(estimated_units, 2)
+                "Fan_Speed": fan_speed,
+                "Flap_Direction": flap_direction,
+                "Estimated_Units_per_day": round(estimated_units, 2)
             }
-        })
-        self.save_memory(memory)
+        }
+
+        self.save_to_canister(entry)   
+
 
         return {
             "Room Temp": room_temp,
@@ -178,19 +203,31 @@ class ACReflexAgent:
             "Estimated Units/day": round(estimated_units, 2)
         }
     
-    # comparision based on past memory in json file
     def find_similar(self, current_input):
-        memory = self.load_memory()
-        for entry in memory:
-            past_input = entry['input']
-            if abs(past_input['room_temp'] - current_input['room_temp']) <= 1.0 \
-               and abs(past_input['humidity'] - current_input['humidity']) <= 5 \
-               and past_input['num_people'] == current_input['num_people'] \
-               and past_input['movement'] == current_input['movement'] \
-               and past_input['timing'].split(":")[0] == current_input['timing'].split(":")[0]:
-                return entry
-        return None
+        # Ask Motoko canister directly
+        return self.query_canister(current_input)
     
+    def save_to_canister(self, entry):
+        url = f"{IC_GATEWAY}/api/v2/canister/{CANISTER_ID}/call/saveMemory"
+        try:
+            requests.post(url, json={"entry": entry})
+        except Exception as e:
+            print("Error saving to Motoko canister:", e)
+
+    def query_canister(self, current_input):
+        url = f"{IC_GATEWAY}/api/v2/canister/{CANISTER_ID}/query/findSimilar"
+        try:
+            resp = requests.post(url, json={"current": current_input})
+            try:
+                data = resp.json()
+            except ValueError:
+                print("Received invalid or empty response from canister.")
+                return None
+            return data
+        except Exception as e:
+            print("Error querying Motoko canister:", e)
+            return None
+
     # ------------for Goal based---------------
     def plan_to_goal(self, current_input):
         """
