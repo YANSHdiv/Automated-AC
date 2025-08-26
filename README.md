@@ -13,7 +13,7 @@ An intelligent **Tkinter GUI** app that works on different **agents** to suggest
 ✅ Estimates **hourly & daily energy consumption**  
 ✅ Handles AC type, tonnage, compressor, ISEER, room size, people, heat, movement, timing, position  
 ✅ Shows **previous vs. new output** side-by-side  
-✅ Stores all data in `ac_agent_memory.json`
+✅ Stores all data in motoko canister.
 
 ---
 
