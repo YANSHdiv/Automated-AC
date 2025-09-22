@@ -53,5 +53,51 @@ An intelligent **Tkinter GUI** app that works on different **agents** to suggest
 - Base combo units adjust total energy estimate  
 - If units > budget, adjust AC temp & mode to save energy
 
+**⚙️ 6. Base Unit Consumption Logic (AC Type + Compressor Type)**
+
+This logic adds a base energy consumption value depending on the AC + compressor combo:
+
+-Split AC + Inverter Rotary Compressor → 10 kWh/day
+
+-Cassette AC + Inverter Rotary Compressor → 11 kWh/day
+
+-Split AC + Scroll Compressor → 11 kWh/day
+
+-Cassette AC + Scroll Compressor → 12 kWh/day
+
+-Window AC + Scroll Compressor → 13 kWh/day
+
+-Window AC + Reciprocating Compressor → 14 kWh/day
+
+-Portable AC + Fixed Speed Rotary Compressor → 15 kWh/day
+
+-Explanation: Different hardware combinations consume different base power.
+ 
 
 
+*Many of the logics are used instead of a hardware sensor.
+
+---
+
+## Setup
+
+Use Linux for ease (due to Motoko) or in Window run by WSL.
+
+### Create Virtual Environment (optional but recommended)
+```bash
+python -m venv venv
+source venv/bin/activate   # On Linux/Mac
+venv\Scripts\activate      # On Windows
+```
+### Install Dependencies
+```bash
+pip install -r requirements.txt
+tkinter
+requests
+```
+⚠️ tkinter usually comes pre-installed with Python. If not, install via system package manager (e.g., sudo apt-get install python3-tk).
+### Running the Project
+```bash
+python gui.py
+```
+Once launched, enter room & AC details, then get recommended AC settings instantly.
